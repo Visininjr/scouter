@@ -13,24 +13,25 @@ def detect_objects(image):
     return [bboxes, labels, confs]
 
 
-def detect_people(image):
+def detect_specific(image, type):
     """
-    detect only people in an image.
-    returns borders (boxes) of people, labels, and confidences of assignment
+    detect all instances of specific type of an object in an image.
+    returns name of type, borders (boxes) of a specific object type,
+    labels, and confidences of assignment
     """
     bboxes, labels, confs = detect_objects(image)
     ret_bboxes = []
     ret_labels = []
     ret_confs = []
     for i, label in enumerate(labels):
-        if label == 'person':
+        if label == type:
             ret_bboxes.append(bboxes[i])
             ret_labels.append(labels[i])
             ret_confs.append(confs[i])
     if not ret_bboxes:
-        print('no people found.')
+        print('no objects of that type found.')
         return []
-    return [ret_bboxes, ret_labels, ret_confs]
+    return [type, ret_bboxes, ret_labels, ret_confs]
 
 
 def plot_image(image, bbox, label, conf):
