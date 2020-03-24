@@ -6,7 +6,7 @@ from cvlib.object_detection import draw_bbox
 
 def detect_objects(image):
     """
-    detect objects in an image.
+    detect objects in an image using cvlib.
     returns borders (boxes) of objects, labels, and confidences of assignment
     """
     bboxes, labels, confs = cv.detect_common_objects(image)

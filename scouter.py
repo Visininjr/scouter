@@ -1,6 +1,6 @@
+from os_stuff import make_file_name
 from item_detector import detect_objects, detect_specific, plot_image
 import cv2
-import os
 import cvlib as cv
 from cvlib.object_detection import draw_bbox
 from datetime import datetime
@@ -27,17 +27,6 @@ def isolate_from_image(image, type, borders, labels):
         cv2.imwrite(path, isolated_image)
         cv2.waitKey(0)
     cv2.destroyAllWindows()
-
-
-def make_file_name(type, dt):
-    if not os.path.exists(type):
-        os.makedirs(type)
-    path = './' + type + '/' + dt + '.png'
-    return path
-
-
-def isolate_from_camera():
-    pass
 
 
 if __name__ == '__main__':
