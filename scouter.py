@@ -1,39 +1,100 @@
-from os_stuff import make_file_name
-from item_detector import detect_objects, detect_specific, plot_image
+# author: Joshua Ren
+# website: https://renj41.wixsite.com/renj
+# github: https://github.com/visininjr/
+from item_detector import detect_objects, isolate_from_image, isolate_from_video, plot_image
+from streetview import download_streetview_image
+from os_stuff import file_exists
+import sys
 import cv2
-import cvlib as cv
-from cvlib.object_detection import draw_bbox
-from datetime import datetime
+import getopt
+
+# picture from http://www.ascii-art.de/ascii/def/dragon_ball.txt
+HEADER = """Welcome to:
+                   `\\-.   `
+                      \\ `.  `
+                       \\  \\ |
+              __.._    |   \\.       SCOUTER (IT'S OVER 9000)
+       ..---~~     ~ . |    Y
+         ~-.          `|    |
+            `.               `~~--.
+              \\                    ~.
+               \\                     \\__. . -- -  .
+         .-~~~~~      ,    ,            ~~~~~~---...._
+      .-~___        ,'/  ,'/ ,'\\          __...---~~~
+            ~-.    /._\\_( ,(/_. 7,-.    ~~---...__
+           _...>- |""6=`_/"6"~    9)    ___...--~~~
+            ~~--._\\`--') `---'   |'  _..--~~~
+                  ~\\   /_        /`-.--~~
+                    `.  ---    .'   \\_
+                      `. ___.-'     | ~-.,-------._
+                  ..._../~~   ./       .-'    .-~~~-.
+            ,--~~~ ,'...\\` _./.----~~.'/    /'       `-
+        _.-(      |\\    `/~ _____..-' /    /      _.-~~`.
+       /   |     /. ^---~~~~       ' /    /     ,'  ~.   \\
+      (    /    (  .           _ ' /'    /    ,/      \\   )
+      (`. |     `\\   - - - - ~   /'      (   /         .  |
+       \\.\\|     \\            /'        \\  |`.           /
+       /.'\\      `\\         /'           ~-\\         .  /\\
+      /,   (        `\\     /'                `.___..-      \\
+     | |    \\         `\\_/'                  //      \\.     |
+     | |     |                              /' |       |     |
+"""
 
 
-def isolate_from_image(image, type, borders, labels):
+def main():
     """
-    isolates objects in an image.
-    writes isolated images to specific directories
+    option flags:
+    -1: isolate and write images of an input
+    -2: isolate images of an input type in real time or video
+    -3: write streetview images from a latitude/longitude
+
+    -s: search for only a specific type of object
+    -h: for more accurate, but slower detection
     """
-    for border_set in borders:
-        # ./people/current_date_time.png
-        dt = str(datetime.now()).replace(' ', '_')
-        path = make_file_name(type, dt)
+    print(HEADER)
+    (options, args) = getopt.getopt(sys.argv[1:], '1234sh')
+    if ('-1', '') in options:
+        image_name = input('Please provide a specific image.\n> ')
+        image = cv2.imread(image_name)
+        if not image.any():  # if all cells are none
+            print('image not found... :(')
+            exit()
+        results = (detect_objects(image) if ('-h', '')
+                   in options else detect_objects(image, use_small_model=True))
+        if ('-s', '') in options:
+            type = input(
+                'Please provide an object type. Types can be found in labels.txt.\n> ')
+            # reference labels.txt for valid types
+            results = (detect_objects(image, type) if (
+                '-h', '') in options else detect_objects(image, type, use_small_model=True))
+        if not results[1]:
+            print('no objects of that type found. :(')
+            exit()
+        isolate_from_image(
+            image, results[0], results[1], results[2], results[3])
+    elif ('-2', '') in options:
+        use_small_model = (False if ('-h', '') in options else True)
+        video_name = input(
+            'Please provide a video file path (default is real time video).\n> ')
+        if not file_exists(video_name):
+            print('Video not found. Real time video will be used instead...')
+            video_name = 0  # 0 is the analogous to real time input
+        if ('-s', '') in options:
+            type = input(
+                'Please provide an object type. Types can be found in labels.txt.\n> ')
+            isolate_from_video(video_name, type, use_small_model)
+        else:
+            isolate_from_video(video_name, use_small_model=use_small_model)
+    elif ('-3', '') in options:
+        location = input(
+            'Please input latitude,longitude coordinates in the following format: \'latitude,longitude\'.')
+        location = location.replace(' ', '_').replace('/', ',')
+        download_streetview_image(location)
 
-        # border_set format: [x1, y1, x2, y2]
-        x1 = border_set[0]
-        x2 = border_set[2]
-        y1 = border_set[1]
-        y2 = border_set[3]
-        isolated_image = image[y1:y2, x1:x2]  # display default: [y, x]
-
-        cv2.imshow(type + ' ' + dt, isolated_image)
-        cv2.imwrite(path, isolated_image)
-        cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    else:
+        print('please provide an option flag... (options in README.md)')
+        exit()
 
 
 if __name__ == '__main__':
-    image = cv2.imread('./images/avengers.jpg')
-    # reference labels.txt for valid types
-    people_borders = detect_specific(image, 'person')
-    if not people_borders:
-        exit()
-    isolate_from_image(
-        image, people_borders[0], people_borders[1], people_borders[2])
+    main()

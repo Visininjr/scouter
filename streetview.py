@@ -1,16 +1,22 @@
+# author: Joshua Ren
+# website: https://renj41.wixsite.com/renj
+# github: https://github.com/visininjr/
 import google_streetview.api
 import google_streetview.helpers
 from datetime import datetime
-from os_stuff import make_dir
-import os
+from os_stuff import make_dir, rename_file
 
 
-def get_streetview_image(location):
+def download_streetview_image(location):
     """
     gets the streetview images of a provided location
     need to take 2 images for each view to get 360 degree perspective.
-    rename object after making it.
+    images are ordered by datetime
     """
+    # for dev purposes
+    # make program wait to avoid unnecessary downloads
+    input("Press enter to download image...")
+
     dt = str(datetime.now()).replace(' ', '_')
     path = './data/' + dt
     make_dir(path)
@@ -29,13 +35,14 @@ def get_streetview_image(location):
         'pitch': '0',
         'key': 'AIzaSyCXHmcksWqO3g5RyIufIcFhaYfbsDQLqyM'
     }]
-    for i, params in enumerate([params_north, params_south]):
-        results = google_streetview.api.results(params)
+    for i, params in enumerate([('north', params_north), ('south', params_south)]):
+        results = google_streetview.api.results(params[1])
 
         # Download images to specified dir
         results.save_links('./data/' + dt + '/links.txt')
         results.download_links('./data/' + dt)
-        os.rename(path + '/gsv_0.jpg', path + '/' + str(i) + '.jpg')
 
-
-get_streetview_image('42.3275364,-71.1420638')
+        old_name = path + '/gsv_0.jpg'  # name from download is always gsv_0.jpg
+        new_name = path + '/' + params[0] + '.jpg'
+        # change name to avoid overwriting file
+        rename_file(old_name, new_name)
