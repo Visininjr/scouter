@@ -12,12 +12,12 @@ $ git clone https://github.com/visininjr/scouter.git
 ```
 
 ### Options flags:
-  -1: isolate and write images of an input
-  -2: isolate images of an input type in real time or video
-  -3: write streetview images from a latitude/longitude
+  + -1: isolate and write images of an input
+  + -2: isolate images of an input type in real time or video
+  + -3: write streetview images from a latitude/longitude
 
-  -s: search for only a specific type of object
-  -h: for more accurate, but slower detection
+  + -s: search for only a specific type of object
+  + -h: for more accurate, but slower detection
 
 ### Authors
 * Joshua Ren
