@@ -12,6 +12,7 @@ $ git clone https://github.com/visininjr/scouter.git
 ```
 
 ### Options flags:
+Example: python3 scouter.py -1 -s -h
 #### Main flags:
   * -1: isolate and write images of an input
   * -2: isolate images of an input type in real time or video

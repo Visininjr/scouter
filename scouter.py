@@ -4,12 +4,13 @@
 from item_detector import detect_objects, isolate_from_image, isolate_from_video, plot_image
 from streetview import download_streetview_image
 from os_stuff import file_exists
+import numpy as np
 import sys
 import cv2
 import getopt
 
 # picture from http://www.ascii-art.de/ascii/def/dragon_ball.txt
-HEADER = """Welcome to:
+HEADER = ["""Welcome to:
                    `\\-.   `
                       \\ `.  `
                        \\  \\ |
@@ -38,7 +39,7 @@ HEADER = """Welcome to:
       /,   (        `\\     /'                `.___..-      \\
      | |    \\         `\\_/'                  //      \\.     |
      | |     |                              /' |       |     |
-"""
+"""]
 
 
 def main():
@@ -51,12 +52,12 @@ def main():
     -s: search for only a specific type of object
     -h: for more accurate, but slower detection
     """
-    print(HEADER)
+    print(HEADER[0])
     (options, args) = getopt.getopt(sys.argv[1:], '1234sh')
-    if ('-1', '') in options:
+    if ('-1', '') in options:  # isolate and write images of an input
         image_name = input('Please provide a specific image.\n> ')
         image = cv2.imread(image_name)
-        if not image.any():  # if all cells are none
+        if np.shape(image) == ():  # image.shape() errors when image is None
             print('image not found... :(')
             exit()
         results = (detect_objects(image) if ('-h', '')
@@ -67,12 +68,12 @@ def main():
             # reference labels.txt for valid types
             results = (detect_objects(image, type) if (
                 '-h', '') in options else detect_objects(image, type, use_small_model=True))
-        if not results[1]:
+        if not results[1]:  # if no results were found, then bboxes will be empty
             print('no objects of that type found. :(')
             exit()
         isolate_from_image(
             image, results[0], results[1], results[2], results[3])
-    elif ('-2', '') in options:
+    elif ('-2', '') in options:  # isolate images of an input type in real time or video
         use_small_model = (False if ('-h', '') in options else True)
         video_name = input(
             'Please provide a video file path (default is real time video).\n> ')
@@ -85,14 +86,14 @@ def main():
             isolate_from_video(video_name, type, use_small_model)
         else:
             isolate_from_video(video_name, use_small_model=use_small_model)
-    elif ('-3', '') in options:
+    elif ('-3', '') in options:  # write streetview images from a latitude/longitude
         location = input(
             'Please input latitude,longitude coordinates in the following format: \'latitude,longitude\'.')
         location = location.replace(' ', '_').replace('/', ',')
         download_streetview_image(location)
 
     else:
-        print('please provide an option flag... (options in README.md)')
+        print('Sorry, please input an option flag... (options in README.md)')
         exit()
 
 

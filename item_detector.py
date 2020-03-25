@@ -19,7 +19,7 @@ def detect_objects(image, type='object', use_small_model=False):
         image, confidence=0.25, model='yolov3-tiny') if use_small_model else cv.detect_common_objects(image))
     if type == 'object':
         return ([type, bboxes, labels, confs])
-    else:
+    else:  # we filter a objects of a specific result type
         ret_bboxes = []
         ret_labels = []
         ret_confs = []
@@ -33,15 +33,17 @@ def detect_objects(image, type='object', use_small_model=False):
 
 def isolate_from_image(image, type, borders, labels, confs):
     """
-    isolates all objects in an image.
+    isolates all objects in an image one by one.
     writes isolated images to specific dir under object type dir.
     confidence of assignment is in file name.
     """
     for i, border_set in enumerate(borders):
+        # file format:
         # ./people/confidence_current_date_time.png
         dt = str(datetime.now())
+        cur_conf = str(round(confs[i], 4))
         # confidence is rounded to 4 significant figures for readability
-        file_name = (str(round(confs[i], 4)) + '_' + dt).replace(' ', '_')
+        file_name = (cur_conf + '_' + dt).replace(' ', '_')
         path = make_file_name(type, file_name)
 
         # border_set format: [x1, y1, x2, y2]
@@ -60,9 +62,10 @@ def isolate_from_image(image, type, borders, labels, confs):
 def isolate_from_video(video, type='object', use_small_model=True):
     """
     isolates objects in real time using device camera and cv2.VidoCapture.
+    object types and model are adjustable in scouter.py.
     """
     camera = cv2.VideoCapture(video)
-    while camera.isOpened():
+    while camera.isOpened():  # stream live video
         status, frame = camera.read()
         # use small model to improve framerate
         type, bbox, label, conf = detect_objects(frame, type, use_small_model)
