@@ -2,7 +2,8 @@
 Hi! Welcome to Scouter.
 
 ### What can I do in Scouter?
-many things to write...
+Use object detection to identify over 80 types of objects in images, video, or real time using your device's camera.
+
 
 ### Cloning from git
 Navigate into the directory on your computer where you would like to place the project folder. Then type the following command to download the project.
@@ -12,7 +13,7 @@ $ git clone https://github.com/visininjr/scouter.git
 ```
 
 ### Options flags:
-Example: python3 scouter.py -1 -s -h
+Example: python3 scouter.py -1 -sh
 #### Main flags:
   * -1: isolate and write images of an input
   * -2: isolate images of an input type in real time or video

@@ -5,17 +5,18 @@ import google_streetview.api
 import google_streetview.helpers
 from datetime import datetime
 from os_stuff import make_dir, rename_file
+from item_detector import isolate_from_image
 
 
 def download_streetview_image(location):
-    """
+    '''
     gets the streetview images of a provided location
     need to take 2 images for each view to get 360 degree perspective.
     images are ordered by datetime
-    """
+    '''
     # for dev purposes
     # make program wait to avoid unnecessary downloads
-    input("Press enter to download image...")
+    input('Press enter to download image...')
 
     dt = str(datetime.now()).replace(' ', '_')
     path = './data/' + dt

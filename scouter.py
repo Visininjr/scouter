@@ -10,7 +10,7 @@ import cv2
 import getopt
 
 # picture from http://www.ascii-art.de/ascii/def/dragon_ball.txt
-HEADER = ["""Welcome to:
+HEADER = ['Welcome to ', '''
                    `\\-.   `
                       \\ `.  `
                        \\  \\ |
@@ -23,7 +23,7 @@ HEADER = ["""Welcome to:
          .-~~~~~      ,    ,            ~~~~~~---...._
       .-~___        ,'/  ,'/ ,'\\          __...---~~~
             ~-.    /._\\_( ,(/_. 7,-.    ~~---...__
-           _...>- |""6=`_/"6"~    9)    ___...--~~~
+           _...>- |''6=`_/'6'~    9)    ___...--~~~
             ~~--._\\`--') `---'   |'  _..--~~~
                   ~\\   /_        /`-.--~~
                     `.  ---    .'   \\_
@@ -38,12 +38,12 @@ HEADER = ["""Welcome to:
        /.'\\      `\\         /'           ~-\\         .  /\\
       /,   (        `\\     /'                `.___..-      \\
      | |    \\         `\\_/'                  //      \\.     |
-     | |     |                              /' |       |     |
-"""]
+      | |     |                             /' |       |     |
+''', 'detector (image) :)', 'detector (video/camera) :)', 'streetview :)']
 
 
 def main():
-    """
+    '''
     option flags:
     -1: isolate and write images of an input
     -2: isolate images of an input type in real time or video
@@ -51,17 +51,19 @@ def main():
 
     -s: search for only a specific type of object
     -h: for more accurate, but slower detection
-    """
-    print(HEADER[0])
+    '''
+    print(HEADER[1])
     (options, args) = getopt.getopt(sys.argv[1:], '1234sh')
     if ('-1', '') in options:  # isolate and write images of an input
+        print(HEADER[0], HEADER[1])
+        type = 'object'
         image_name = input('Please provide a specific image.\n> ')
         image = cv2.imread(image_name)
         if np.shape(image) == ():  # image.shape() errors when image is None
             print('image not found... :(')
             exit()
         results = (detect_objects(image) if ('-h', '')
-                   in options else detect_objects(image, use_small_model=True))
+                   in options else detect_objects(image, type, True))
         if ('-s', '') in options:
             type = input(
                 'Please provide an object type. Types can be found in labels.txt.\n> ')
@@ -69,11 +71,13 @@ def main():
             results = (detect_objects(image, type) if (
                 '-h', '') in options else detect_objects(image, type, use_small_model=True))
         if not results[1]:  # if no results were found, then bboxes will be empty
-            print('no objects of that type found. :(')
+            print('no objects of type ' + type + ' found. :(')
             exit()
-        isolate_from_image(
+        number_found = isolate_from_image(
             image, results[0], results[1], results[2], results[3])
+        print(str(number_found) + ' ' + type + ' type objects found.')
     elif ('-2', '') in options:  # isolate images of an input type in real time or video
+        print(HEADER[0], HEADER[2])
         use_small_model = (False if ('-h', '') in options else True)
         video_name = input(
             'Please provide a video file path (default is real time video).\n> ')
@@ -87,6 +91,7 @@ def main():
         else:
             isolate_from_video(video_name, use_small_model=use_small_model)
     elif ('-3', '') in options:  # write streetview images from a latitude/longitude
+        print(HEADER[0], HEADER[3])
         location = input(
             'Please input latitude,longitude coordinates in the following format: \'latitude,longitude\'.')
         location = location.replace(' ', '_').replace('/', ',')
