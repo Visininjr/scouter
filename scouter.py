@@ -1,5 +1,4 @@
 # author: Joshua Ren
-# website: https://renj41.wixsite.com/renj
 # github: https://github.com/visininjr/
 from item_detector import detect_objects, isolate_from_image, isolate_from_video, plot_image
 from streetview import download_streetview_image

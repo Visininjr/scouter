@@ -1,5 +1,4 @@
 # author: Joshua Ren
-# website: https://renj41.wixsite.com/renj
 # github: https://github.com/visininjr/
 from os_stuff import make_file_name
 import cv2

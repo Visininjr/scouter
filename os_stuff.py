@@ -2,6 +2,7 @@
 # website: https://renj41.wixsite.com/renj
 # github: https://github.com/visininjr/
 import os
+import json
 
 
 def make_file_name(type, name):
@@ -41,3 +42,15 @@ def file_exists(path):
     checks to see if the file exists and is a file (i.e. it is not a directory)
     '''
     return os.path.exists(path) and os.path.isfile(path)
+
+
+def get_API_key(id):
+    '''
+    returns an API key.
+    '''
+    secrets_filename = '../secret_keys'
+    api_keys = {}
+    with open(secrets_filename, 'r') as f:
+        api_keys = json.loads(f.read())
+
+    return api_keys[id]

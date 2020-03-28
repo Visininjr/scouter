@@ -1,8 +1,8 @@
 # Scouter
 Hi! Welcome to Scouter.
 
-### What can I do in Scouter?
-Use object detection to identify over 80 types of objects in images, video, or real time using your device's camera.
+### What can I do with Scouter?
+Use object detection to identify over 80 types of objects in images, video, or real time using your device's camera. Plot trends using data of these objects (e.g. see where a type of object tends to go).
 
 
 ### Cloning from git
