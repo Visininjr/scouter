@@ -7,6 +7,8 @@ import json
 from datetime import datetime
 from os_stuff import make_dir, rename_file, get_API_key
 from item_detector import isolate_from_image
+import shutil
+import requests
 
 key = get_API_key('maps_key')
 
@@ -14,42 +16,49 @@ key = get_API_key('maps_key')
 def download_streetview_image(location):
     '''
     gets the streetview images of a provided location
-    need to take 2 images for each view to get 360 degree perspective.
-    images are ordered by datetime
+    need to take 4 images for each view to get 360 degree perspective
+    images are ordered by location. 5 requests to api each run
     '''
-    # for dev purposes
-    # make program wait to avoid unnecessary downloads
-    input('Press enter to download image...')
-
-    dt = str(datetime.now()).replace(' ', '_')
-    path = './data/' + dt
+    dt = str(datetime.now())
+    path_name = location.replace(',', '_')  # dir where data will be stored
+    path = './streetview_data/' + location
     make_dir(path)
 
-    params_north = [{
-        'size': '640x640',  # max 640x640 pixels
-        'location': location,  # 'latitude','longitude'
-        'heading': '0',
-        'pitch': '0',
-        'key': key
-    }]
-    params_south = [{
-        'size': '640x640',
-        'location': location,
-        'heading': '180',
-        'pitch': '0',
-        'key': key
-    }]
-    for i, params in enumerate([('north', params_north), ('south', params_south)]):
-        results = google_streetview.api.results(params[1])
+    # url for getting images
+    url = 'https://maps.googleapis.com/maps/api/streetview?'
 
-        # Download images to specified dir
-        results.save_links('./data/' + dt + '/links.txt')
-        results.download_links('./data/' + dt)
+    # get 4 images since each view is by default 90 degree fov
+    for i, direction in enumerate(['north', 'east', 'south', 'west']):
+        request = requests.get(url + 'size=640x640' + '&location=' +
+                               location + '&heading=' + str(i * 90) + '&key=' + key, stream=True)
+        full_path = path + '/' + direction + '.jpg'
+        process_image_request(full_path, request)
+    process_metadata_request(location, path, dt)
 
-        old_name = path + '/gsv_0.jpg'  # name from download is always gsv_0.jpg
-        new_name = path + '/' + params[0] + '.jpg'
-        # change name to avoid overwriting file
-        rename_file(old_name, new_name)
+
+def process_image_request(path, request):
+    '''
+    takes in a HTTPS request and downloads the image to the specified path.
+    '''
+    if request.status_code == 200:
+        with open(path, 'wb') as out_file:
+            shutil.copyfileobj(request.raw, out_file)
+    else:
+        print('error code ', request.status_code)
+
+
+def process_metadata_request(location, path, dt):
+    '''
+    takes in a HTTPS request and downloads the metadata as a json file.
+    '''
+    metadata_url = 'https://maps.googleapis.com/maps/api/streetview/metadata?'
+    metadata_request = requests.get(
+        metadata_url + 'location=' + location + '&key=' + key)
+    results_metadata = metadata_request.json()
+    results_metadata['date_requested'] = dt
+    full_path = path + '/metadata.json'
+    with open(full_path, 'w') as fp:
+        json.dump(results_metadata, fp)
 
 
 def get_map(location):
@@ -61,11 +70,11 @@ def get_location(query):
     gets locations from user input
     returns a list of locations with metadata of each location
     '''
-    url = "https://maps.googleapis.com/maps/api/place/textsearch/json?"
+    url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?'
     query_requests = requests.get(url + 'query=' + query + '&key=' + key)
-    json_requests = query_requests.json()
+    json_results = query_requests.json()
 
-    results = json_requests['results']
+    results = json_results['results']
     locations = []
     for i in range(len(results)):
         lat = results[i]['geometry']['location']['lat']
