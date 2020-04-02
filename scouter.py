@@ -56,7 +56,7 @@ def main():
     if ('-1', '') in options:  # isolate and write images of an input
         print(HEADER[0], HEADER[1])
         type = 'object'
-        image_name = input('Please provide a specific image.\n> ')
+        image_name = input('Please provide a specific image.\n')
         image = cv2.imread(image_name)
         if np.shape(image) == ():  # image.shape() errors when image is None
             print('image not found... :(')
@@ -65,7 +65,7 @@ def main():
                    in options else detect_objects(image, type, True))
         if ('-s', '') in options:
             type = input(
-                'Please provide an object type. Types can be found in labels.txt.\n> ')
+                'Please provide an object type. Types can be found in labels.txt.\n')
             # reference labels.txt for valid types
             results = (detect_objects(image, type) if (
                 '-h', '') in options else detect_objects(image, type, use_small_model=True))
@@ -79,23 +79,21 @@ def main():
         print(HEADER[0], HEADER[2])
         use_small_model = (False if ('-h', '') in options else True)
         video_name = input(
-            'Please provide a video file path (default is real time video).\n> ')
+            'Please provide a video file path (default is real time video).\n')
         if not file_exists(video_name):
             print('Video not found. Real time video will be used instead...')
             video_name = 0  # 0 is the analogous to real time input
         if ('-s', '') in options:
             type = input(
-                'Please provide an object type. Types can be found in labels.txt.\n> ')
+                'Please provide an object type. Types can be found in labels.txt.\n')
             isolate_from_video(video_name, type, use_small_model)
         else:
             isolate_from_video(video_name, use_small_model=use_small_model)
     elif ('-3', '') in options:  # write streetview images from a latitude/longitude
         print(HEADER[0], HEADER[3])
         location = input(
-            'Please input latitude,longitude coordinates in the following format: \'latitude,longitude\'.')
-        location = location.replace(' ', '_').replace('/', ',')
-        download_streetview_image(location)
-
+            'Please enter the name of a location or input a location in the following format: latitude,longitude.\n')
+        location = location.replace('/', ',')
     else:
         print('Sorry, please input an option flag... (options in README.md)')
         exit()

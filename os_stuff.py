@@ -2,12 +2,13 @@
 # website: https://renj41.wixsite.com/renj
 # github: https://github.com/visininjr/
 import os
+from datetime import datetime
 import json
 
 
 def make_file_name(type, name):
     '''
-    creates a file name for detected objects and classifies them.
+    creates a file name for detected objects and classifies them
     ./person/conf_current_date_time.png
     '''
     make_dir(type)
@@ -15,9 +16,16 @@ def make_file_name(type, name):
     return path
 
 
+def get_current_dt():
+    '''
+    returns current date time
+    '''
+    return datetime.now()
+
+
 def make_dir(dir_name):
     '''
-    creates a directory.
+    creates a directory
     '''
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)
@@ -25,14 +33,14 @@ def make_dir(dir_name):
 
 def rename_file(p1, p2):
     '''
-    renames a file from p1 to p2.
+    renames a file from p1 to p2
     '''
     os.rename(p1, p2)
 
 
 def get_subdirs(root):
     '''
-    gets all subdirectories from a root path.
+    gets all subdirectories from a root path
     '''
     return [subdirs for dirs, subdirs, files in os.walk('./streetview_data')]
 
@@ -46,7 +54,7 @@ def file_exists(path):
 
 def get_API_key(id):
     '''
-    returns an API key.
+    returns an API key
     '''
     secrets_filename = '../secret_keys'
     api_keys = {}

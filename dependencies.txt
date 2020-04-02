@@ -1,2 +1,4 @@
 pip3 install cvlib
 pip3 install opencv-python-headless
+brew install mongodb
+pip3 install pymongo

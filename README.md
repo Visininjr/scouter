@@ -17,7 +17,7 @@ Example: python3 scouter.py -1 -sh
 #### Main flags:
   * -1: isolate and write images of an input
   * -2: isolate images of an input type in real time or video
-  * -3: write streetview images from a latitude/longitude
+  * -3: write streetview images from a latitude/longitude or address
 #### Additional flags:
   * -s: search for only a specific type of object
   * -h: for more accurate, but slower detection

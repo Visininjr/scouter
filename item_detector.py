@@ -1,10 +1,9 @@
 # author: Joshua Ren
 # github: https://github.com/visininjr/
-from os_stuff import make_file_name
+from os_stuff import make_file_name, get_current_dt
 import cv2
 import matplotlib.pyplot as plt
 import cvlib as cv
-from datetime import datetime
 from cvlib.object_detection import draw_bbox
 
 
@@ -35,12 +34,12 @@ def isolate_from_image(image, type, borders, labels, confs):
     isolates all objects in an image one by one.
     writes isolated images to specific dir under object type dir.
     confidence of assignment is in file name.
-    return number of objects of specificied type found.
+    returns number of objects of specificied type found.
     '''
     for i, border_set in enumerate(borders):
         # file format:
         # ./people/confidence_current_date_time.png
-        dt = str(datetime.now())
+        dt = str(get_current_dt())
         cur_conf = str(round(confs[i], 4))
         # confidence is rounded to 4 significant figures for readability
         file_name = (cur_conf + '_' + dt).replace(' ', '_')
@@ -54,7 +53,7 @@ def isolate_from_image(image, type, borders, labels, confs):
         isolated_image = image[y1:y2, x1:x2]  # display default: [y, x]
 
         cv2.imshow(type + ': ' + file_name, isolated_image)
-        cv2.imwrite(path, isolated_image)
+        cv2.imwrite(path, isolated_image)  # replace with putting into db
         cv2.waitKey(0)
     cv2.destroyAllWindows()
     return len(borders)
