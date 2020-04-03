@@ -60,7 +60,7 @@ def get_map(location):  # todo
     gmap = reference_my_heatmap2()
 
 
-def save_streetview_image(location, type='object', use_small_model=False):
+def save_streetview_image(location, type='object', use_small_model=False, force_run=False):
     '''
     gets the streetview images of a provided location
     need to take 4 images for each view to get 360 degree perspective
@@ -75,27 +75,29 @@ def save_streetview_image(location, type='object', use_small_model=False):
     # get 4 images since each view is by default 90 degree fov
     # returns images as north, east, south, west
     for i, direction in enumerate(['north', 'east', 'south', 'west']):
-        request = requests.get(url + 'size=640x640' + '&location=' +
-                               location + '&heading=' + str(i * 90) + '&key=' + key, stream=True)
-        if request.status_code == 200:
-            cv_image = process_image_request(request)
-            detected_objects = detect_objects(cv_image, type, use_small_model)
-            image_with_boxes = get_image_with_boxes(
-                cv_image, detected_objects[1], detected_objects[2], detected_objects[3])
-            metadata = process_metadata_request(
-                location, direction, get_current_dt())
-            # update entry instead of adding a new one if they exist in db
-            if db.get_count(type, 'location', location) >= 4:
-                id = db.update_one(location, type,
-                                   image_with_boxes, metadata, direction, get_current_dt())
+        # update entry instead of adding a new one if they exist in db
+        # document exists but want to update
+        db_count = db.get_count(type, 'location', location)
+        if (db_count >= 4 and force_run) or db_count < 4:
+            request = requests.get(url + 'size=640x640' + '&location=' +
+                                   location + '&heading=' + str(i * 90) + '&key=' + key, stream=True)
+            if request.status_code == 200:
+                cv_image = process_image_request(request)
+                detected_objects = detect_objects(
+                    cv_image, type, use_small_model)
+                image_with_boxes = get_image_with_boxes(
+                    cv_image, detected_objects[1], detected_objects[2], detected_objects[3])
+                metadata = process_metadata_request(
+                    location, direction, get_current_dt())
+                id = db.insert_one(
+                    location, type, image_with_boxes, metadata, direction, get_current_dt())
+                ids.append(id)
             else:
-                id = db.insert_one(location, type, image_with_boxes,
-                                   metadata, direction, get_current_dt())
-            ids.append(id)
-
+                print('streetview image download for location ' +
+                      location + direction + 'errored, code: ' + request.status_code)
         else:
-            print('streetview image download for location ' +
-                  location + direction + 'errored, code: ' + request.status_code)
+            print(
+                'streetview image exists for location ' + location + ' ' + direction + '. If you wish to override set the \'force_run\' parameter to True.')
     return ids
 
 

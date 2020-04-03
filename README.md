@@ -22,6 +22,19 @@ Example: python3 scouter.py -1 -sh
   * -s: search for only a specific type of object
   * -h: for more accurate, but slower detection
 
+
+#### Streetview:
+   * database object keys:
+       * location
+       * type
+       * image
+       * shape
+       * dtype
+       * meta
+       * direction
+       * date_requested
+       * author
+
 ### Authors
 * Joshua Ren
 
