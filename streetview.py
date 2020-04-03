@@ -102,6 +102,10 @@ def save_streetview_image(location, type='object', use_small_model=False, force_
 
 
 def test_error(results):
+    '''
+    tests to see if places query errored
+    Note: no places found does not error
+    '''
     try:  # error occurred
         test = results['error_message']
         return test

@@ -3,6 +3,7 @@
 from os_stuff import get_current_dt
 from pymongo import MongoClient
 import gridfs
+import numpy as np
 import json
 
 
@@ -19,6 +20,7 @@ class MongoDB:
         the image, encoding information about the image, and
         some metadata about the image is stored in the db
         automatically performs check to see if data exists in db
+        image is stored as an id in self.fs and is automatically converted back to cv2 when requested
         returns _id field from db to confirm successful insert into db
         '''
 
@@ -67,7 +69,12 @@ class MongoDB:
         '''
         returns a list of items for items with that key value
         '''
-        return [item for item in self.db[collection].find({key: value})]
+        ret = []
+        for doc in self.db[collection].find({key: value}):
+            image = self.__reshape_image(doc)
+            doc['image'] = image
+            ret.append(doc)
+        return ret
 
     def get_collection(self, collection):
         '''
@@ -88,3 +95,8 @@ class MongoDB:
         item_collection = self.db[collection]
         delete = item_collection.delete_many({})
         return delete.deleted_count
+
+    def __reshape_image(self, document):
+        g_out = self.fs.get(document['image'])
+        img = np.frombuffer(g_out.read(), dtype=np.uint8)
+        return np.reshape(img, document['shape'])
