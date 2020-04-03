@@ -29,21 +29,22 @@ def detect_objects(image, type='object', use_small_model=False):
         return [type, ret_bboxes, ret_labels, ret_confs]
 
 
-def isolate_from_image(image, type, borders, labels, confs):
+def get_image_with_boxes(image, bbox, label, conf, write_conf_in_image=True):
     '''
-    isolates all objects in an image one by one.
-    writes isolated images to specific dir under object type dir.
-    confidence of assignment is in file name.
-    returns number of objects of specificied type found.
+    returns image with boxes around each detected object in an image
     '''
+    return draw_bbox(image, bbox, label, conf, write_conf=write_conf_in_image)
+
+
+def isolate_from_image(image, borders, labels, confs):
+    '''
+    isolates all objects in an image
+    returns list of isolated images with their labels and confidences of assignment
+    '''
+    ret = []
     for i, border_set in enumerate(borders):
-        # file format:
-        # ./people/confidence_current_date_time.png
-        dt = str(get_current_dt())
-        cur_conf = str(round(confs[i], 4))
-        # confidence is rounded to 4 significant figures for readability
-        file_name = (cur_conf + '_' + dt).replace(' ', '_')
-        path = make_file_name(type, file_name)
+        cur_label = labels[i]
+        cur_conf = confs[i]
 
         # border_set format: [x1, y1, x2, y2]
         x1 = border_set[0]
@@ -52,17 +53,17 @@ def isolate_from_image(image, type, borders, labels, confs):
         y2 = border_set[3]
         isolated_image = image[y1:y2, x1:x2]  # display default: [y, x]
 
-        cv2.imshow(type + ': ' + file_name, isolated_image)
-        cv2.imwrite(path, isolated_image)  # replace with putting into db
+        cv2.imshow(cur_label isolated_image)
+        ret.append([isolated_image, cur_label, cur_conf])
         cv2.waitKey(0)
     cv2.destroyAllWindows()
-    return len(borders)
+    return ret
 
 
 def isolate_from_video(video, type='object', use_small_model=True):
     '''
-    isolates objects in real time using device camera and cv2.VidoCapture.
-    object types and model are adjustable in scouter.py.
+    isolates objects in real time using device camera and cv2.VidoCapture
+    object types and model are adjustable in scouter.py
     '''
     camera = cv2.VideoCapture(video)
     while camera.isOpened():  # stream live video
@@ -77,12 +78,3 @@ def isolate_from_video(video, type='object', use_small_model=True):
 
     camera.release()
     cv2.destroyAllWindows()
-
-
-def plot_image(image, bbox, label, conf):
-    '''
-    plots detected images using matplotlib.
-    '''
-    output_image = draw_bbox(image, bbox, label, conf, write_conf=True)
-    plt.imshow(output_image)
-    plt.show()

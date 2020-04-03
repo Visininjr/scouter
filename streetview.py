@@ -4,10 +4,9 @@ import requests
 import json
 import cv2
 import numpy as np
-from os_stuff import make_dir, rename_file, get_API_key, get_current_dt
-from item_detector import isolate_from_image
+from os_stuff import get_API_key, get_current_dt
+from item_detector import detect_objects, isolate_from_image, get_image_with_boxes
 from mongodb import MongoDB
-import shutil
 
 key = get_API_key('maps_key')
 
@@ -29,37 +28,29 @@ def lat_lng_intify(location):
     return [lat_lng[0], lat_lng[1]]
 
 
-def process_image_request(path, request):
+def process_image_request(request):
     '''
     takes in a HTTPS request and downloads the image to the specified path.
     '''
-    if request.status_code == 200:
-        resp = request.raw
-        image_arr = np.asarray(bytearray(resp.read()), dtype="uint8")
-        image = cv2.imdecode(image_arr, cv2.IMREAD_COLOR)
-
-        # for testing
-        cv2.imshow('image', image)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-    return request.status_code
+    resp = request.raw
+    image_arr = np.asarray(bytearray(resp.read()), dtype="uint8")
+    image = cv2.imdecode(image_arr, cv2.IMREAD_COLOR)
+    return image
 
 
-def process_metadata_request(location, path, dt):
+def process_metadata_request(location, direction, dt):
     '''
-    takes in a HTTPS request and downloads the metadata as a json file.
+    takes in a HTTPS request and converts the metadata as a json file.
+    returns the metadata result
     '''
     metadata_url = 'https://maps.googleapis.com/maps/api/streetview/metadata?'
     metadata_request = requests.get(
         metadata_url + 'location=' + location + '&key=' + key)
     results_metadata = metadata_request.json()
-    results_metadata['date_requested'] = dt
-    full_path = path + '/metadata.json'
-    with open(full_path, 'w') as fp:  # replace with putting into db
-        json.dump(results_metadata, fp)
+    return results_metadata
 
 
-def get_map(location):
+def get_map(location):  # todo
     '''
     get data from db
     '''
@@ -69,39 +60,51 @@ def get_map(location):
     gmap = reference_my_heatmap2()
 
 
+def save_streetview_image(location, type='object', use_small_model=False):
+    '''
+    gets the streetview images of a provided location
+    need to take 4 images for each view to get 360 degree perspective
+    images are ordered by location. 5 requests to api each run
+    location is always in lat,lng to avoid inconsistencies and overlaps
+    '''
+    db = MongoDB()
+    # url for getting images
+    url = 'https://maps.googleapis.com/maps/api/streetview?'
+
+    ids = []
+    # get 4 images since each view is by default 90 degree fov
+    # returns images as north, east, south, west
+    for i, direction in enumerate(['north', 'east', 'south', 'west']):
+        request = requests.get(url + 'size=640x640' + '&location=' +
+                               location + '&heading=' + str(i * 90) + '&key=' + key, stream=True)
+        if request.status_code == 200:
+            cv_image = process_image_request(request)
+            detected_objects = detect_objects(cv_image, type, use_small_model)
+            image_with_boxes = get_image_with_boxes(
+                cv_image, detected_objects[1], detected_objects[2], detected_objects[3])
+            metadata = process_metadata_request(
+                location, direction, get_current_dt())
+            # update entry instead of adding a new one if they exist in db
+            if db.get_count(type, 'location', location) >= 4:
+                id = db.update_one(location, type,
+                                   image_with_boxes, metadata, direction, get_current_dt())
+            else:
+                id = db.insert_one(location, type, image_with_boxes,
+                                   metadata, direction, get_current_dt())
+            ids.append(id)
+
+        else:
+            print('streetview image download for location ' +
+                  location + direction + 'errored, code: ' + request.status_code)
+    return ids
+
+
 def test_error(results):
     try:  # error occurred
         test = results['error_message']
         return test
     except:  # no error
         return ''
-
-
-def download_streetview_image(location):
-    '''
-    gets the streetview images of a provided location
-    need to take 4 images for each view to get 360 degree perspective
-    images are ordered by location. 5 requests to api each run
-    '''
-    dt = str(get_current_dt())
-    path_name = location.replace(',', '_')  # dir where data will be stored
-    path = './data/' + location
-    make_dir(path)
-
-    # url for getting images
-    url = 'https://maps.googleapis.com/maps/api/streetview?'
-
-    # get 4 images since each view is by default 90 degree fov
-    # returns images as north, east, south, west
-    for i, direction in enumerate(['north', 'east', 'south', 'west']):
-        request = requests.get(url + 'size=640x640' + '&location=' +
-                               location + '&heading=' + str(i * 90) + '&key=' + key, stream=True)
-        full_path = path + '/' + direction + '.jpg'
-        if process_image_request(full_path, request) != 200:
-            print('HTTP error ' + str(request.status_code) +
-                  ' encountered for location ' + path_name + ' direction ' + direction)
-    process_metadata_request(location, path, dt)
-    print('streetview image download for location ' + path_name + ' success')
 
 
 def get_location(query):
@@ -115,7 +118,7 @@ def get_location(query):
     results = json_results['results']
     if test_error(results):
         return []
-    print(json_results['next_page_token'])
+    # json_results['next_page_token'] TODO
     locations = []
     for i in range(len(results)):
         lat = results[i]['geometry']['location']['lat']

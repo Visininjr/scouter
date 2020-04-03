@@ -1,7 +1,7 @@
 # author: Joshua Ren
 # github: https://github.com/visininjr/
 from item_detector import detect_objects, isolate_from_image, isolate_from_video, plot_image
-from streetview import download_streetview_image
+from streetview import save_streetview_image
 from os_stuff import file_exists
 import numpy as np
 import sys
@@ -58,7 +58,7 @@ def main():
         type = 'object'
         image_name = input('Please provide a specific image.\n')
         image = cv2.imread(image_name)
-        if np.shape(image) == ():  # image.shape() errors when image is None
+        if np.shape(image) == ():  # if the image doesn't exist
             print('image not found... :(')
             exit()
         results = (detect_objects(image) if ('-h', '')
@@ -72,9 +72,9 @@ def main():
         if not results[1]:  # if no results were found, then bboxes will be empty
             print('no objects of type ' + type + ' found. :(')
             exit()
-        number_found = isolate_from_image(
-            image, results[0], results[1], results[2], results[3])
-        print(str(number_found) + ' ' + type + ' type objects found.')
+        # TODO insert to DB
+        images_found = isolate_from_image(
+            image, results[1], results[2], results[3])
     elif ('-2', '') in options:  # isolate images of an input type in real time or video
         print(HEADER[0], HEADER[2])
         use_small_model = (False if ('-h', '') in options else True)
@@ -90,7 +90,7 @@ def main():
         else:
             isolate_from_video(video_name, use_small_model=use_small_model)
     elif ('-3', '') in options:  # write streetview images from a latitude/longitude
-        print(HEADER[0], HEADER[3])
+        print(HEADER[0], HEADER[3])  # TODO
         location = input(
             'Please enter the name of a location or input a location in the following format: latitude,longitude.\n')
         location = location.replace('/', ',')
