@@ -7,14 +7,14 @@ import numpy as np
 import json
 
 
-class MongoDB:
+class My_MongoDB:
     def __init__(self, port=27017):
         self.client = MongoClient('localhost', port)
         self.db = self.client['scouter']
         self.fs = gridfs.GridFS(self.db)
         self.author = 'Joshua Ren'
 
-    def insert_one(self, location, type, image, metadata, direction, dt):
+    def insert_one(self, location, type, image, metadata, direction, count, dt):
         '''
         type is the name of the collection being accessed,
         the image, encoding information about the image, and
@@ -42,6 +42,7 @@ class MongoDB:
             'dtype': str(image.dtype),
             'meta': metadata,
             'direction': direction,
+            'object_count': count,
             'date_requested': dt,
             'author': self.author,
         }

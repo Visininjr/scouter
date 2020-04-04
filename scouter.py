@@ -90,7 +90,7 @@ def main():
         else:
             isolate_from_video(video_name, use_small_model=use_small_model)
     elif ('-3', '') in options:  # write streetview images from a latitude/longitude
-        print(HEADER[0], HEADER[3])  # TODO
+        print(HEADER[0], HEADER[3])
         location = input(
             'Please enter the name of a location or input a location in the following format: latitude,longitude.\n')
         location = location.replace('/', ',')

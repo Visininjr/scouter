@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from os_stuff import get_API_key, get_current_dt
 from item_detector import detect_objects, isolate_from_image, get_image_with_boxes
-from mongodb import MongoDB
+from mongodb import My_MongoDB
 
 key = get_API_key('maps_key')
 
@@ -24,13 +24,13 @@ def lat_lng_intify(location):
     turns string latitude and longitude location into list of ints
     '45, 45' -> [45, 45]
     '''
-    lat_lng = location.split(',')
-    return [lat_lng[0], lat_lng[1]]
+    lat_lng = location.replace(' ', '').split(',')
+    return (lat_lng[0], lat_lng[1])
 
 
 def process_image_request(request):
     '''
-    takes in a HTTPS request and downloads the image to the specified path.
+    takes in a HTTPS request and returns the image as cv2
     '''
     resp = request.raw
     image_arr = np.asarray(bytearray(resp.read()), dtype="uint8")
@@ -50,16 +50,6 @@ def process_metadata_request(location, direction, dt):
     return results_metadata
 
 
-def get_map(location):  # todo
-    '''
-    get data from db
-    '''
-    lat_lng = lat_lng_intify(location)
-    raw_data = db_stuff()  # get data from db
-
-    gmap = reference_my_heatmap2()
-
-
 def save_streetview_image(location, type='object', use_small_model=False, force_run=False):
     '''
     gets the streetview images of a provided location
@@ -67,37 +57,38 @@ def save_streetview_image(location, type='object', use_small_model=False, force_
     images are ordered by location. 5 requests to api each run
     location is always in lat,lng to avoid inconsistencies and overlaps
     '''
-    db = MongoDB()
-    # url for getting images
+    db = My_MongoDB()
     url = 'https://maps.googleapis.com/maps/api/streetview?'
-
+    images_per_location = 4
     ids = []
-    # get 4 images since each view is by default 90 degree fov
-    # returns images as north, east, south, west
-    for i, direction in enumerate(['north', 'east', 'south', 'west']):
-        # update entry instead of adding a new one if they exist in db
-        # document exists but want to update
-        db_count = db.get_count(type, 'location', location)
-        if (db_count >= 4 and force_run) or db_count < 4:
+
+    db_count = db.get_count(type, 'location', location)
+    # enable force_run if document exists but want to update
+    if (db_count >= images_per_location and force_run) or db_count < images_per_location:
+        # get 4 images since each view is by default 90 degree fov
+        # returns images as north, east, south, west
+        for i, direction in enumerate(['north', 'east', 'south', 'west']):
             request = requests.get(url + 'size=640x640' + '&location=' +
                                    location + '&heading=' + str(i * 90) + '&key=' + key, stream=True)
             if request.status_code == 200:
                 cv_image = process_image_request(request)
                 detected_objects = detect_objects(
                     cv_image, type, use_small_model)
+                # length of borders list
+                object_count = len(detected_objects[1])
                 image_with_boxes = get_image_with_boxes(
                     cv_image, detected_objects[1], detected_objects[2], detected_objects[3])
                 metadata = process_metadata_request(
                     location, direction, get_current_dt())
                 id = db.insert_one(
-                    location, type, image_with_boxes, metadata, direction, get_current_dt())
+                    location, type, image_with_boxes, metadata, direction, object_count, get_current_dt())
                 ids.append(id)
             else:
                 print('streetview image download for location ' +
-                      location + direction + 'errored, code: ' + request.status_code)
-        else:
-            print(
-                'streetview image exists for location ' + location + ' ' + direction + '. If you wish to override set the \'force_run\' parameter to True.')
+                      location + ' ' + direction + 'errored, code: ' + request.status_code)
+    else:
+        print('streetview images exist for location ' + location +
+              '. If you wish to override this set the \'force_run\' parameter to True.')
     return ids
 
 
@@ -116,7 +107,7 @@ def test_error(results):
 def get_location(query):
     '''
     gets locations from user input using google places api
-    returns a list of locations with metadata of each location
+    returns a list of locations in lat,lng format with metadata of each location
     '''
     url = 'https://maps.googleapis.com/maps/api/place/textsearch/json?'
     query_requests = requests.get(url + 'query=' + query + '&key=' + key)

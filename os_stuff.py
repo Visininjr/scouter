@@ -1,5 +1,4 @@
 # author: Joshua Ren
-# website: https://renj41.wixsite.com/renj
 # github: https://github.com/visininjr/
 import os
 from datetime import datetime
@@ -60,5 +59,4 @@ def get_API_key(id):
     api_keys = {}
     with open(secrets_filename, 'r') as f:
         api_keys = json.loads(f.read())
-
     return api_keys[id]
