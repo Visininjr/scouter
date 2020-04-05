@@ -57,7 +57,7 @@ def get_map_corners(lat, lng, zoom, b=640, h=640):
     return ret
 
 
-def get_map(location, zoom='16', b='640', h='640'):
+def get_map(location, zoom='14', b='640', h='640'):
     '''
     return a static map of a given location
     '''
@@ -67,6 +67,7 @@ def get_map(location, zoom='16', b='640', h='640'):
     map = process_image_request(request)
     lat_center, lng_center = lat_lng_intify(location)
     # coordinates will be read from db TODO
+    heat_coordinates = [(37.7596093, -122.4851074)]
 
     def add_dots(map, coordinates):  # intensity related to object count TODO
         '''
@@ -82,4 +83,4 @@ def get_map(location, zoom='16', b='640', h='640'):
             map = cv2.circle(map, y_x_center, radius, color, thickness)
         return map
 
-    return add_dots(map, [(37.7596093, -122.4851074)])
+    return add_dots(map, heat_coordinates)

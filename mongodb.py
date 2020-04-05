@@ -98,11 +98,36 @@ class My_MongoDB:
         return delete.deleted_count
 
     def delete_collection(self, collection):
+        '''
+        deletes a collection
+        returns the number of objects deleted
+        '''
         item_collection = self.db[collection]
         delete = item_collection.delete_many({})
         return delete.deleted_count
 
+    def delete_all_collections(self):
+        '''
+        deletes all collections in a database
+        returns the number of objects deleted
+        '''
+        confirmation = input(
+            'Please type \'delete\' to delete ALL collections in db\n')
+        count = 0
+        if confirmation == 'delete':
+            for collection in self.get_collection_names():
+                count += self.delete_collection(collection)
+            print('OK, all collections deleted, ' +
+                  str(count) + ' objects deleted\n')
+        else:
+            print('collections deletion cancelled\n')
+        return count
+
     def __reshape_image(self, document):
+        '''
+        private function that gets an image from fs and reshapes it
+        returns the original cv2 image that was put into the database
+        '''
         g_out = self.fs.get(document['image'])
         img = np.frombuffer(g_out.read(), dtype=np.uint8)
         return np.reshape(img, document['shape'])

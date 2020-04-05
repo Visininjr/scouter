@@ -29,6 +29,17 @@ def lat_lng_intify(location):
     return (float(lat_lng[0]), float(lat_lng[1]))
 
 
+def test_error(request):
+    '''
+    tests to see if an error occurred in the https request
+    returns error message if there was one
+    '''
+    try:  # error occurred
+        return request['error_message']
+    except:  # no error
+        return ''
+
+
 def process_image_request(request):
     '''
     takes in a HTTPS request and returns the image as cv2
@@ -52,6 +63,10 @@ def process_metadata_request(location, direction, dt):
 
 
 def save_specific_streetview_images(db, location, isolated_images, metadata, direction, dt):
+    '''
+    saves each detected object in an image to the database
+    returns the ids of those inserts
+    '''
     specific_ids = []
     for isolated_image_set in isolated_images:
         isolated_image = isolated_image_set[0]
@@ -69,12 +84,13 @@ def save_streetview_image(location, use_small_model=False, force_run=False):
     need to take 4 images for each view to get 360 degree perspective
     images are ordered by location. 5 requests to api each run
     location is always in lat,lng to avoid inconsistencies and overlaps
+    errors end the query early to save requests workload
+    returns ids of images inserted into db
     '''
     db = My_MongoDB()
     url = 'https://maps.googleapis.com/maps/api/streetview?'
     images_per_location = 4
     ids = []
-
     # db count uses default type to get consistent results
     db_count = db.get_count(DEFAULT, 'location', location)
     # enable force_run if document exists but want to update
@@ -84,44 +100,37 @@ def save_streetview_image(location, use_small_model=False, force_run=False):
         for i, direction in enumerate(['north', 'east', 'south', 'west']):
             request = requests.get(url + 'size=640x640' + '&location=' +
                                    location + '&heading=' + str(i * 90) + '&key=' + KEY, stream=True)
-            if request.status_code == 200:
-                cv_image = process_image_request(request)
-                detected_objects = detect_objects(
-                    cv_image, DEFAULT, use_small_model)
-                # length of borders list
-                object_count = len(detected_objects[1])
-                image_with_boxes = get_image_with_boxes(
-                    cv_image, detected_objects[1], detected_objects[2], detected_objects[3])
-                metadata = process_metadata_request(
-                    location, direction, get_current_dt())
-                dt = get_current_dt()
-                id = db.insert_one(
-                    location, DEFAULT, image_with_boxes, metadata, direction, object_count, dt)
-
-                isolated_images = isolate_from_image(
-                    cv_image, detected_objects[1], detected_objects[2], detected_objects[3])
-                specific_ids = save_specific_streetview_images(
-                    db, location, isolated_images, metadata, direction, dt)
-                ids.append((id, specific_ids))
-            else:
+            if request.status_code != 200:  # base error check
                 print('streetview image download for location ' +
                       location + ' ' + direction + 'errored, code: ' + request.status_code)
+                break
+            metadata = process_metadata_request(
+                location, direction, get_current_dt())
+            if metadata['status'] != 'OK':  # error check before inserting data into db
+                print('error occurred with getting image: ' +
+                      metadata['status'])
+                break
+            cv_image = process_image_request(request)
+            detected_objects = detect_objects(
+                cv_image, DEFAULT, use_small_model)
+            # length of borders list will be number of objects in photo
+            object_count = len(detected_objects[1])
+            image_with_boxes = get_image_with_boxes(
+                cv_image, detected_objects[1], detected_objects[2], detected_objects[3])
+            # other information to be inserted into db
+            dt = get_current_dt()
+            id = db.insert_one(
+                location, DEFAULT, image_with_boxes, metadata, direction, object_count, dt)
+            # insert specific objects into db as well
+            isolated_images = isolate_from_image(
+                cv_image, detected_objects[1], detected_objects[2], detected_objects[3])
+            specific_ids = save_specific_streetview_images(
+                db, location, isolated_images, metadata, direction, dt)
+            ids.append((id, specific_ids))
     else:
         print('streetview images exist for location ' + location +
               '. If you wish to override this set the \'force_run\' parameter to True.')
-    return ids
-
-
-def test_error(results):
-    '''
-    tests to see if places query errored
-    Note: no places found does not error
-    '''
-    try:  # error occurred
-        test = results['error_message']
-        return test
-    except:  # no error
-        return ''
+    return id
 
 
 def get_location(query):
@@ -135,7 +144,6 @@ def get_location(query):
     results = json_results['results']
     if test_error(results):
         return []
-    # json_results['next_page_token'] TODO
     locations = []
     for i in range(len(results)):
         lat = results[i]['geometry']['location']['lat']
