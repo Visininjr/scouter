@@ -10,34 +10,37 @@ import math
 key = get_API_key('maps_key')
 
 
-def get_map(location, zoom='16'):
+def pixels_to_coordinates(lat_center, lng_center, x, y, b, h, zoom):
     '''
-    return a static map of a given location
+    function that converts the y, x pixel coordinates of a map image
+    to the respective latitude, longitude coordinates in the world
+    returns latitude, longitude coordinates of a point in a map image
     '''
-    b = h = 640
-    lat, lng = lat_lng_intify(location)
-    url = "https://maps.googleapis.com/maps/api/staticmap?"
-    request = requests.get(url + 'size=' + str(b) + 'x' + str(h) +
-                           '&center=' + location + '&zoom=' + zoom + '&key=' + key, stream=True)
-    return process_image_request(request)
-
-
-def pixels_to_coordinates(lat, lng, x, y, b, h, zoom):
-    parallel_multiplier = math.cos(lat * math.pi / 180)
+    parallel_multiplier = math.cos(lat_center * math.pi / 180)
     degrees_X = 360 / math.pow(2, int(zoom) + 8)
     degrees_Y = 360 / math.pow(2, int(zoom) + 8) * parallel_multiplier
-    point_lat = lat - degrees_Y * (y - h / 2)
-    point_lng = lng + degrees_X * (x - b / 2)
+    point_lat = lat_center - degrees_Y * (y - h / 2)
+    point_lng = lng_center + degrees_X * (x - b / 2)
     return (point_lat, point_lng)
 
-# def coordinates_to_pixels TODO
+
+def coordinates_to_pixels(lat_center, lng_center, lat, lng, b, h, zoom):
+    '''
+    function that converts the latitude, longitude coordinates in the world
+    to the respective y, x pixel coordinates in a static map image
+    returns y,x coordinates of a point in in the world
+    '''
+    parallel_multiplier = math.cos(lat_center * math.pi / 180)
+    degrees_X = 360 / math.pow(2, int(zoom) + 8)
+    degrees_Y = 360 / math.pow(2, int(zoom) + 8) * parallel_multiplier
+    y = h / 2 - (lat - lat_center) / degrees_Y
+    x = b / 2 + (lng - lng_center) / degrees_X
+    return (y, x)
 
 
-def get_map_corners(lat, lng, b=640, h=640, zoom='16'):
+def get_map_corners(lat, lng, zoom, b=640, h=640):
     '''
     formula to get the corner coordinates of a map image
-    based from stackoverflow post on getting coordinates from an image
-    https://stackoverflow.com/questions/47106276/converting-pixels-to-latlng-coordinates-from-google-static-image
     returns tuples of corner coordinates of current map: nw, ne, sw, se
     '''
     ret = []
@@ -50,3 +53,31 @@ def get_map_corners(lat, lng, b=640, h=640, zoom='16'):
             lat, lng, x, y, b, h, zoom)
         ret.append((point_lat, point_lng))
     return ret
+
+
+def get_map(location, zoom='16', b='640', h='640'):
+    '''
+    return a static map of a given location
+    '''
+    url = "https://maps.googleapis.com/maps/api/staticmap?"
+    request = requests.get(url + 'size=' + b + 'x' + h +
+                           '&center=' + location + '&zoom=' + zoom + '&key=' + key, stream=True)
+    map = process_image_request(request)
+    lat_center, lng_center = lat_lng_intify(location)
+    # coordinates will be read from db TODO
+
+    def add_dots(map, coordinates):
+        '''
+        returns map with location based object frequency added
+        '''
+        radius = 4
+        thickness = -1  # fills circle
+        color = (0, 0, 255)
+        for lat, lng in coordinates:
+            y, x = coordinates_to_pixels(
+                lat_center, lng_center, lat, lng, float(b), float(h), zoom)
+            y_x_center = (int(y), int(x))
+            map = cv2.circle(map, y_x_center, radius, color, thickness)
+        return map
+
+    return add_dots(map, [(37.7596093, -122.4851074)])

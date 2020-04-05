@@ -21,11 +21,11 @@ def lat_lng_stringify(lat, lng):
 
 def lat_lng_intify(location):
     '''
-    turns string latitude and longitude location into list of ints
+    turns string latitude and longitude location into list of floats
     '45, 45' -> [45, 45]
     '''
     lat_lng = location.replace(' ', '').split(',')
-    return (lat_lng[0], lat_lng[1])
+    return (float(lat_lng[0]), float(lat_lng[1]))
 
 
 def process_image_request(request):
