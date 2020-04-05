@@ -52,11 +52,7 @@ def isolate_from_image(image, borders, labels, confs):
         y1 = border_set[1]
         y2 = border_set[3]
         isolated_image = image[y1:y2, x1:x2]  # display default: [y, x]
-
-        cv2.imshow(cur_label, isolated_image)
         ret.append([isolated_image, cur_label, cur_conf])
-        cv2.waitKey(0)
-    cv2.destroyAllWindows()
     return ret
 
 

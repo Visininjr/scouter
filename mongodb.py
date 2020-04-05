@@ -8,13 +8,14 @@ import json
 
 
 class My_MongoDB:
-    def __init__(self, port=27017):
-        self.client = MongoClient('localhost', port)
+    def __init__(self, server='localhost', port=27017):
+        self.client = MongoClient(server, port)
         self.db = self.client['scouter']
         self.fs = gridfs.GridFS(self.db)
         self.author = 'Joshua Ren'
 
-    def insert_one(self, location, type, image, metadata, direction, count, dt):
+    def insert_one(self, location, type, image, metadata, direction, count, dt, confidence=-1):
+        # add type specific based on labels automatically, to avoid extra queries TODO
         '''
         type is the name of the collection being accessed,
         the image, encoding information about the image, and
@@ -37,6 +38,7 @@ class My_MongoDB:
         post = {
             'location': location,
             'type': type,
+            'confidence': confidence,
             'image': image_id,
             'shape': image.shape,
             'dtype': str(image.dtype),
@@ -82,6 +84,9 @@ class My_MongoDB:
         return list of documents in a collection
         '''
         return [item for item in self.db[collection].find()]
+
+    def get_collection_names(self):
+        return self.db.list_collection_names()
 
     def delete_documents(self, collection, key, value):
         '''

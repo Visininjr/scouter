@@ -7,11 +7,12 @@ import cv2
 import requests
 import math
 
-key = get_API_key('maps_key')
+KEY = get_API_key('maps_key')
 
 
 def pixels_to_coordinates(lat_center, lng_center, x, y, b, h, zoom):
     '''
+    based on https://stackoverflow.com/questions/47106276/converting-pixels-to-latlng-coordinates-from-google-static-image
     function that converts the y, x pixel coordinates of a map image
     to the respective latitude, longitude coordinates in the world
     returns latitude, longitude coordinates of a point in a map image
@@ -26,6 +27,7 @@ def pixels_to_coordinates(lat_center, lng_center, x, y, b, h, zoom):
 
 def coordinates_to_pixels(lat_center, lng_center, lat, lng, b, h, zoom):
     '''
+    based on https://stackoverflow.com/questions/47106276/converting-pixels-to-latlng-coordinates-from-google-static-image
     function that converts the latitude, longitude coordinates in the world
     to the respective y, x pixel coordinates in a static map image
     returns y,x coordinates of a point in in the world
@@ -61,12 +63,12 @@ def get_map(location, zoom='16', b='640', h='640'):
     '''
     url = "https://maps.googleapis.com/maps/api/staticmap?"
     request = requests.get(url + 'size=' + b + 'x' + h +
-                           '&center=' + location + '&zoom=' + zoom + '&key=' + key, stream=True)
+                           '&center=' + location + '&zoom=' + zoom + '&key=' + KEY, stream=True)
     map = process_image_request(request)
     lat_center, lng_center = lat_lng_intify(location)
     # coordinates will be read from db TODO
 
-    def add_dots(map, coordinates):
+    def add_dots(map, coordinates):  # intensity related to object count TODO
         '''
         returns map with location based object frequency added
         '''
