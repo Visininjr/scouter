@@ -26,6 +26,8 @@ class My_MongoDB:
         '''
 
         collection = self.db[type]
+        if image == []:
+            print('WTF BITCHHHH')
         image_string = image.tostring()
         image_id = self.fs.put(image_string, encoding='utf-8')
         item_check_location = collection.find_one(
@@ -83,7 +85,12 @@ class My_MongoDB:
         '''
         return list of documents in a collection
         '''
-        return [item for item in self.db[collection].find()]
+        ret = []
+        for doc in self.db[collection].find():
+            image = self.__reshape_image(doc)
+            doc['image'] = image
+            ret.append(doc)
+        return ret
 
     def get_collection_names(self):
         return self.db.list_collection_names()

@@ -20,7 +20,7 @@ def lat_lng_stringify(lat, lng):
     return str(lat) + ',' + str(lng)
 
 
-def lat_lng_intify(location):
+def lat_lng_numify(location):
     '''
     turns string latitude and longitude location into list of floats
     '45, 45' -> [45, 45]
@@ -62,20 +62,26 @@ def process_metadata_request(location, direction, dt):
     return results_metadata
 
 
-def save_specific_streetview_images(db, location, isolated_images, metadata, direction, dt):
+def save_to_db(db, location, cv_image, metadata, direction, dt, use_small_model):
     '''
-    saves each detected object in an image to the database
-    returns the ids of those inserts
+    saves all images to DEFAULT collection
+    also automatically saves images to their specific type collection
     '''
-    specific_ids = []
-    for isolated_image_set in isolated_images:
-        isolated_image = isolated_image_set[0]
-        isolated_image_label = isolated_image_set[1]
-        isolated_image_conf = isolated_image_set[2]
-        specific_id = db.insert_one(
-            location, isolated_image_label, isolated_image, metadata, direction, 1, dt, isolated_image_conf)
-        specific_ids.append(specific_id)
-    return specific_ids
+    ids = []
+    detected_objects = detect_objects(
+        cv_image, use_small_model=use_small_model)
+    labels = detected_objects[2] + [DEFAULT]
+    for type in set(labels):
+        detected_objects = detect_objects(
+            cv_image, type, use_small_model)
+        object_count = len(detected_objects[1])
+        image_with_boxes = get_image_with_boxes(
+            cv_image, detected_objects[1], detected_objects[2], detected_objects[3])
+
+        id = db.insert_one(
+            location, type, image_with_boxes, metadata, direction, object_count, dt)
+        ids.append((type, id))
+    return ids
 
 
 def save_streetview_image(location, use_small_model=False, force_run=False):
@@ -89,48 +95,32 @@ def save_streetview_image(location, use_small_model=False, force_run=False):
     '''
     db = My_MongoDB()
     url = 'https://maps.googleapis.com/maps/api/streetview?'
-    images_per_location = 4
     ids = []
     # db count uses default type to get consistent results
     db_count = db.get_count(DEFAULT, 'location', location)
     # enable force_run if document exists but want to update
-    if (db_count >= images_per_location and force_run) or db_count < images_per_location:
+    if (db_count > 0 and force_run) or db_count == 0:
         # get 4 images since each view is by default 90 degree fov
         # returns images as north, east, south, west
         for i, direction in enumerate(['north', 'east', 'south', 'west']):
             request = requests.get(url + 'size=640x640' + '&location=' +
                                    location + '&heading=' + str(i * 90) + '&key=' + KEY, stream=True)
-            if request.status_code != 200:  # base error check
-                print('streetview image download for location ' +
-                      location + ' ' + direction + 'errored, code: ' + request.status_code)
-                break
             metadata = process_metadata_request(
                 location, direction, get_current_dt())
-            if metadata['status'] != 'OK':  # error check before inserting data into db
-                print('error occurred with getting image: ' +
-                      metadata['status'])
-                break
-            cv_image = process_image_request(request)
-            detected_objects = detect_objects(
-                cv_image, DEFAULT, use_small_model)
-            # length of borders list will be number of objects in photo
-            object_count = len(detected_objects[1])
-            image_with_boxes = get_image_with_boxes(
-                cv_image, detected_objects[1], detected_objects[2], detected_objects[3])
-            # other information to be inserted into db
             dt = get_current_dt()
-            id = db.insert_one(
-                location, DEFAULT, image_with_boxes, metadata, direction, object_count, dt)
-            # insert specific objects into db as well
-            isolated_images = isolate_from_image(
-                cv_image, detected_objects[1], detected_objects[2], detected_objects[3])
-            specific_ids = save_specific_streetview_images(
-                db, location, isolated_images, metadata, direction, dt)
-            ids.append((id, specific_ids))
+            # error check before inserting data into db
+            if request.status_code == 200 and metadata['status'] == 'OK':
+                cv_image = process_image_request(request)
+                ids += save_to_db(db, location, cv_image, metadata,
+                                  direction, dt, use_small_model)
+            else:
+                print(location + ' error getting image: ' +
+                      metadata['status'] + ' HTTPS code: ' + str(request.status_code))
+                break
     else:
         print('streetview images exist for location ' + location +
               '. If you wish to override this set the \'force_run\' parameter to True.')
-    return id
+    return ids
 
 
 def get_location(query):

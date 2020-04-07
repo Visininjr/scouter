@@ -6,16 +6,18 @@ import matplotlib.pyplot as plt
 import cvlib as cv
 from cvlib.object_detection import draw_bbox
 
+DEFAULT = 'object'
 
-def detect_objects(image, type='object', use_small_model=False):
+
+def detect_objects(image, type=DEFAULT, use_small_model=False):
     '''
     detect objects in an image using cvlib.
-    returns type of objects (default is 'object'),
+    returns type of objects (default is DEFAULT),
     borders (boxes) of objects, labels, and confidences of assignment.
     '''
     bboxes, labels, confs = (cv.detect_common_objects(
         image, confidence=0.25, model='yolov3-tiny') if use_small_model else cv.detect_common_objects(image))
-    if type == 'object':
+    if type == DEFAULT:
         return ([type, bboxes, labels, confs])
     else:  # we filter a objects of a specific result type
         ret_bboxes = []
@@ -56,7 +58,7 @@ def isolate_from_image(image, borders, labels, confs):
     return ret
 
 
-def isolate_from_video(video, type='object', use_small_model=True):
+def isolate_from_video(video, type=DEFAULT, use_small_model=True):
     '''
     isolates objects in real time using device camera and cv2.VidoCapture
     object types and model are adjustable in scouter.py
