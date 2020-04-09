@@ -1,10 +1,12 @@
 # author: Joshua Ren
 # github: https://github.com/visininjr/
 from os_stuff import make_file_name, get_current_dt
+from cvlib.object_detection import draw_bbox
+import cvlib as cv
 import cv2
 import matplotlib.pyplot as plt
-import cvlib as cv
-from cvlib.object_detection import draw_bbox
+import numpy as np
+
 
 DEFAULT = 'object'
 

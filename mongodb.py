@@ -3,6 +3,7 @@
 from os_stuff import get_current_dt
 from pymongo import MongoClient
 import gridfs
+import cv2
 import numpy as np
 import json
 
@@ -26,8 +27,8 @@ class My_MongoDB:
         '''
 
         collection = self.db[type]
-        if image == []:
-            print('WTF BITCHHHH')
+        if image == [] or metadata['status'] != 'OK':
+            print('error occurred while converted image')
         image_string = image.tostring()
         image_id = self.fs.put(image_string, encoding='utf-8')
         item_check_location = collection.find_one(
@@ -70,7 +71,7 @@ class My_MongoDB:
         '''
         return self.db[collection].count_documents({key: value})
 
-    def get_items(self, collection, key, value):
+    def get_documents(self, collection, key, value):
         '''
         returns a list of items for items with that key value
         '''

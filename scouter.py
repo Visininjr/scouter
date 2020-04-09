@@ -1,8 +1,10 @@
 # author: Joshua Ren
 # github: https://github.com/visininjr/
-from item_detector import detect_objects, isolate_from_image, isolate_from_video, plot_image
-from streetview import save_streetview_image
+from item_detector import detect_objects, isolate_from_image, isolate_from_video, get_image_with_boxes
+from streetview import get_location
 from os_stuff import file_exists
+from map import get_map
+from mongodb import My_MongoDB
 import numpy as np
 import sys
 import cv2
@@ -29,16 +31,17 @@ HEADER = ['Welcome to ', '''
                       `. ___.-'     | ~-.,-------._
                   ..._../~~   ./       .-'    .-~~~-.
             ,--~~~ ,'...\\` _./.----~~.'/    /'       `-
-        _.-(      |\\    `/~ _____..-' /    /      _.-~~`.
+        _.-(      |\\    `/~ _____..-'/    /      _.-~~`.
        /   |     /. ^---~~~~       ' /    /     ,'  ~.   \\
       (    /    (  .           _ ' /'    /    ,/      \\   )
-      (`. |     `\\   - - - - ~   /'      (   /         .  |
-       \\.\\|     \\            /'        \\  |`.           /
-       /.'\\      `\\         /'           ~-\\         .  /\\
+      (`. |    `\\   - - - - ~    /'      (   /         .  |
+       \\.\\|      \\             /'        \\  |`.           /
+       /.'\\       `\\         /'           ~-\\         .  /\\
       /,   (        `\\     /'                `.___..-      \\
      | |    \\         `\\_/'                  //      \\.     |
       | |     |                             /' |       |     |
-''', 'detector (image) :)', 'detector (video/camera) :)', 'streetview :)']
+''', 'detector (image) :)', 'detector (video/camera) :)', 'mapper :)']
+DEFAULT = 'object'
 
 
 def main():
@@ -54,29 +57,35 @@ def main():
     print(HEADER[1])
     (options, args) = getopt.getopt(sys.argv[1:], '1234sh')
     if ('-1', '') in options:  # isolate and write images of an input
-        print(HEADER[0], HEADER[1])
-        type = 'object'
+        print(HEADER[0] + HEADER[2])
+        type = DEFAULT
         image_name = input('Please provide a specific image.\n')
         image = cv2.imread(image_name)
         if np.shape(image) == ():  # if the image doesn't exist
             print('image not found... :(')
             exit()
-        results = (detect_objects(image) if ('-h', '')
-                   in options else detect_objects(image, type, True))
+        results = detect_objects(image)
         if ('-s', '') in options:
             type = input(
                 'Please provide an object type. Types can be found in labels.txt.\n')
             # reference labels.txt for valid types
-            results = (detect_objects(image, type) if (
-                '-h', '') in options else detect_objects(image, type, use_small_model=True))
+            results = detect_objects(image, type)
         if not results[1]:  # if no results were found, then bboxes will be empty
             print('no objects of type ' + type + ' found. :(')
-            exit()
-        # TODO insert to DB
-        images_found = isolate_from_image(
+        # TODO insert to DB?
+        image_with_boxes = get_image_with_boxes(
+            np.copy(image), results[1], results[2], results[3])
+        cv2.imshow('image', image_with_boxes)  # show image with boxes
+        cv2.waitKey(0)
+
+        isolated_images = isolate_from_image(
             image, results[1], results[2], results[3])
+        for im_set in isolated_images:  # show all isolated images as well
+            cv2.imshow(im_set[1] + ' ' + str(im_set[2]), im_set[0])
+            cv2.waitKey(0)
+        cv2.destroyAllWindows()
     elif ('-2', '') in options:  # isolate images of an input type in real time or video
-        print(HEADER[0], HEADER[2])
+        print(HEADER[0] + HEADER[3])
         use_small_model = (False if ('-h', '') in options else True)
         video_name = input(
             'Please provide a video file path (default is real time video).\n')
@@ -90,10 +99,38 @@ def main():
         else:
             isolate_from_video(video_name, use_small_model=use_small_model)
     elif ('-3', '') in options:  # write streetview images from a latitude/longitude
-        print(HEADER[0], HEADER[3])
-        location = input(
-            'Please enter the name of a location or input a location in the following format: latitude,longitude.\n')
-        location = location.replace('/', ',')
+        print(HEADER[0] + HEADER[4])
+        query = input(
+            'Please enter the name of a location or input a location in the following format: latitude,longitude.\n').replace('/', ',')
+        search_type = ''
+        if ('-s', '') in options:
+            search_type = input(
+                'Please provide an object type. Types can be found in labels.txt.\n')
+        num_points_str = input(
+            'Please provide number of points to add. Enter \'0\' if you don\'t want to add any.\n')
+        # '' converts to 0
+        num_points = int(num_points_str) if num_points_str else 0
+        db = My_MongoDB()
+        locations = (get_location(query))[0]
+        type = search_type if search_type else DEFAULT
+        for location in locations:
+            map_set = get_map(location, type, num_points)
+            map = map_set[0]
+            ids = map_set[1]
+            print('Map ready!  Displaying now...')
+            cv2.imshow(query, map)
+            cv2.waitKey(0)
+            for id in ids:
+                cur_doc = (db.get_documents(type, '_id', id))[0]
+                cur_type = cur_doc['type']
+                cur_image = cur_doc['image']
+                cur_loc = cur_doc['location']
+                cur_direction = cur_doc['direction']
+                cur_title = cur_type + ' ' + cur_loc + ' ' + cur_direction
+                cv2.imshow(cur_title, cur_image)
+                cv2.waitKey(0)
+            cv2.destroyAllWindows()
+
     else:
         print('Sorry, please input an option flag... (options in README.md)')
         exit()

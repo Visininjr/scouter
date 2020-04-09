@@ -35,7 +35,8 @@ def test_error(request):
     returns error message if there was one
     '''
     try:  # error occurred
-        return request['error_message']
+        print(request['error_message'])
+        return 'error'
     except:  # no error
         return ''
 
@@ -76,7 +77,7 @@ def save_to_db(db, location, cv_image, metadata, direction, dt, use_small_model)
             cv_image, type, use_small_model)
         object_count = len(detected_objects[1])
         image_with_boxes = get_image_with_boxes(
-            cv_image, detected_objects[1], detected_objects[2], detected_objects[3])
+            np.copy(cv_image), detected_objects[1], detected_objects[2], detected_objects[3])
 
         id = db.insert_one(
             location, type, image_with_boxes, metadata, direction, object_count, dt)

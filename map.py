@@ -59,29 +59,42 @@ def get_map_corners(lat, lng, zoom, b, h):
     return ret
 
 
-def add_n_points(n, map_corners, type):
+def get_color(frequency):
+    '''
+    returns a tuple of BGR (blue, green, red) value
+    from frequency of some object
+    '''
+    return (0, 0, 255)
+
+
+def add_n_points(n, map_corners, type, base_location):
     '''
     returns ids of n random points inserted into the db
     '''
     db = My_MongoDB()
     ret = []
+    if not db.get_documents(DEFAULT, 'location', base_location):
+        ids = save_streetview_image(base_location)
+        ret += ids
+
     i = 0
     while i < n:
         lat = round(random.uniform(map_corners[0][0], map_corners[2][0]), 7)
         lng = round(random.uniform(map_corners[0][1], map_corners[1][1]), 7)
         location = lat_lng_stringify(lat, lng)
         # if this point already exists in the db we want reselect a random point
-        if db.get_items(DEFAULT, 'location', location):
+        if db.get_documents(DEFAULT, 'location', location):
             continue
         ids = save_streetview_image(location)
         ret += ids
-        i += 1
+        i = i + 1 if ids else i
     return ret
 
 
-def get_map(location, type=DEFAULT, zoom='14', b='640', h='640'):
+def get_map(location, type=DEFAULT, num_points=0, zoom='14', b='640', h='640'):
     '''
     return a static map of a given location
+    with points detected objects of some type
     '''
 
     url = "https://maps.googleapis.com/maps/api/staticmap?"
@@ -91,41 +104,32 @@ def get_map(location, type=DEFAULT, zoom='14', b='640', h='640'):
     db = My_MongoDB()
     b = int(b)
     h = int(h)
+    ids = []
 
-    if not db.get_items(DEFAULT, 'location', location):
-        ids = save_streetview_image(location)
-
-    def add_heat_layer(map, min_points=5):  # intensity related to object count TODO
+    def add_heat_layer(map, num_points):  # intensity related to object count TODO
         '''
         returns map with location based object frequency added
         '''
         lat_center, lng_center = lat_lng_numify(location)
-        if True:  # TODO
-            print('not enough points found, adding points...')
+
+        if num_points:
+            print('adding ' + str(num_points) + ' points...')
             corners = get_map_corners(
                 lat_center, lng_center, zoom, b, h)
-            add_n_points(min_points, corners, type)
+            add_n_points(num_points, corners, type, location)
 
         radius = 4
         thickness = -1  # fills circle
-        color = (0, 0, 255)
         documents = db.get_collection(type)
         for document in documents:
             lat, lng = lat_lng_numify(document['location'])
             y_x_center = coordinates_to_pixels(
                 lat_center, lng_center, lat, lng, float(b), float(h), zoom)
             if (y_x_center[0] >= 0 and y_x_center[0] <= h) and (y_x_center[1] >= 0 and y_x_center[1] <= h):
+                frequency = document['object_count']
+                color = get_color(frequency)
                 map = cv2.circle(map, y_x_center, radius, color, thickness)
-        return map
+                ids.append(document['_id'])
+        return [map, ids]
 
-    return add_heat_layer(map)
-
-
-# a = My_MongoDB()
-# map = get_map('37.7596398,-122.4812207')
-# cv2.imshow('map', map)
-# cv2.waitKey(0)
-# im = [b['image'] for b in a.get_collection('car')]
-# for i in im:
-#     cv2.imshow('img', i)
-#     cv2.waitKey(0)
+    return add_heat_layer(map, num_points)
