@@ -47,17 +47,18 @@ $ git clone https://github.com/visininjr/scouter.git
   ```
 
   Database object keys:
-     * location
-     * type
-     * confidence
-     * image
-     * shape
-     * dtype
-     * meta
-     * direction
-     * object_count
-     * date_requested
-     * author
+  
+  * location
+  * type
+  * confidence
+  * image
+  * shape
+  * dtype
+  * meta
+  * direction
+  * object_count
+  * date_requested
+  * author
 
 ### Authors
 * Joshua Ren
